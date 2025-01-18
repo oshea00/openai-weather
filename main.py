@@ -111,12 +111,16 @@ def process_weather_query(query: str) -> str:
         if response.choices[0].message.tool_calls:
             # Determine which tool is being called
             tool_call = response.choices[0].message.tool_calls[0]
+            function_name = tool_call.function.name
             function_args = json.loads(tool_call.function.arguments)
 
-            # Call the weather function with the extracted parameters
-            result = get_weather_forecast(
-                city=function_args["city"], state=function_args["state"]
-            )
+            # Call the appropriate function based on the tool name
+            if function_name == "get_weather_forecast":
+                result = get_weather_forecast(
+                    city=function_args["city"], state=function_args["state"]
+                )
+            else:
+                result = f"Unknown function: {function_name}"
         else:
             # Display any other responses
             result = response.choices[0].message.content
