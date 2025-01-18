@@ -8,9 +8,10 @@ import json
 from typing import Optional, Dict, List, Any
 import os
 from geopy.geocoders import Nominatim
+import socket
 
-# Define the weather tool schema
-WEATHER_TOOLS = [
+# Define the tool schema
+TOOLS = [
     {
         "type": "function",
         "function": {
@@ -28,7 +29,21 @@ WEATHER_TOOLS = [
                 "required": ["city", "state"],
             },
         },
-    }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_ip_address",
+            "description": "Get the IP address of a given FQDN hostname",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "hostname": {"type": "string", "description": "The FQDN hostname"},
+                },
+                "required": ["hostname"],
+            },
+        },
+    },
 ]
 
 
@@ -90,6 +105,15 @@ def get_weather_forecast(city: str, state: str) -> str:
     return response
 
 
+def get_ip_address(hostname: str) -> str:
+    """Get the IP address of a given FQDN hostname"""
+    try:
+        ip_address = socket.gethostbyname(hostname)
+        return f"The IP address of {hostname} is {ip_address}"
+    except Exception as e:
+        return f"Error getting IP address for {hostname}: {e}"
+
+
 def process_weather_query(query: str) -> str:
     """Process a natural language weather query using OpenAI's tools"""
 
@@ -104,7 +128,7 @@ def process_weather_query(query: str) -> str:
                 },
                 {"role": "user", "content": query},
             ],
-            tools=WEATHER_TOOLS,
+            tools=TOOLS,
         )
 
         # Check if there are tool calls in the response
@@ -119,6 +143,8 @@ def process_weather_query(query: str) -> str:
                 result = get_weather_forecast(
                     city=function_args["city"], state=function_args["state"]
                 )
+            elif function_name == "get_ip_address":
+                result = get_ip_address(hostname=function_args["hostname"])
             else:
                 result = f"Unknown function: {function_name}"
         else:
@@ -141,6 +167,8 @@ if __name__ == "__main__":
         "Say hello",
         "I might be interested in the weather, would you know how to get a weather report?",
         "What's the weather like in Seattle, Washington?",
+        "That's great. I forgot the IP address of my blog site. Can you help me with that?",
+        "My blog is at oshea00.github.io",
     ]
 
     for query in example_queries:
